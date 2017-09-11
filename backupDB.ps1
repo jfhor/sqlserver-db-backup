@@ -1,7 +1,10 @@
 param(  
-    $serverName,
-	$databaseName,
-    $backupDirectory
+	[Parameter(Mandatory=$true)]
+	[string]$serverName,
+	[Parameter(Mandatory=$true)]
+	[string]$databaseName,
+	[Parameter(Mandatory=$true)]
+    [string]$backupDirectory
 )
 
 [System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.SMO") | Out-Null
@@ -11,9 +14,24 @@ param(
 
 $server = New-Object ("Microsoft.SqlServer.Management.Smo.Server") $serverName
 $dbs = $server.Databases
+
+try {
+	# test connection
+	$dbs | Out-Null
+} catch {
+	throw $_.Exception.Message
+}
+
 $database = $dbs[$databaseName]
 
 $dbName = $database.Name
+if ([string]::IsNullOrEmpty($dbName)) {
+	throw "Database not found."
+}
+
+if (-Not(Test-Path $backupDirectory)) {
+	throw "Please provide a valid logging filepath."
+}
 
 $timestamp = Get-Date -format yyyyMMdd-HHmmss
 $targetPath = $backupDirectory + "\" + $dbName + "_" + $timestamp + ".bak"
